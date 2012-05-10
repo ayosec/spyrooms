@@ -5,6 +5,7 @@ require "pathname"
 require "yaml"
 require "json"
 require "time"
+require_relative "colors"
 
 ConfigFire = Pathname.new("~/.campfire").expand_path
 
@@ -12,6 +13,7 @@ TerminalColumns = (ENV["COLUMNS"] || `tput cols`).to_i
 
 module Spy
   extend self
+  extend Colors
 
   class RequestFailed < Exception; end
 
@@ -71,6 +73,12 @@ module Spy
 
       name_width = names.values.map {|name| name.length }.max
 
+      available_colors = [ method(:green), method(:yellow), method(:cyan) ].cycle
+      name_colors = {}
+      names.each_key do |user_id|
+        name_colors[user_id] = available_colors.next
+      end
+
       # Print the transcript
       transcript["messages"].each do |message|
 
@@ -79,15 +87,17 @@ module Spy
 
 
         created_at = Time.parse(message["created_at"]).strftime("%F %X")
-        header = 
-          created_at +
-          " " +
-          "%#{name_width}s" % names[message["user_id"]] +
-          " > "
 
-        prefix = " " * header.size
+        name = "%#{name_width}s" % names[message["user_id"]]
+        color = name_colors[message["user_id"]]
 
-        print header
+        prefix = " " * (created_at.size + name.size + 2)
+
+
+        print magenta(created_at)
+        print " "
+        print color[name]
+        print " "
 
         # wrap body
         lines = []
@@ -101,12 +111,12 @@ module Spy
         end
 
         if message["type"] != "TextMessage"
-          lines.unshift "-- #{message["type"]} -- "
+          lines.unshift red("-- #{message["type"]} -- ")
         end
 
-        puts lines.shift
+        puts color[lines.shift]
         lines.each do |line|
-          puts prefix + line
+          puts prefix + color[line]
         end
 
       end
