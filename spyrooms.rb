@@ -51,12 +51,22 @@ module Spy
   def run!
     load_config!
 
+    date = ""
+    ARGV.each do |arg|
+      case arg
+      when %r{\Adate=(\d+/\d+/\d+)\Z}
+        date = "/#$1"
+      else
+        STDERR.puts red("Ignore invalid argument #{arg}")
+      end
+    end
+
     log "Getting rooms..."
     get("rooms")["rooms"].each do |room|
       name, id = room.values_at("name", "id")
 
       log "Loading '#{name}' transcript..."
-      transcript = get("room/#{id}/transcript")
+      transcript = get("room/#{id}/transcript#{date}")
 
       names = transcript["messages"].
         map {|message| message["user_id"]}.
